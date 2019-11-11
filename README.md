@@ -268,3 +268,68 @@ If you think you’ve found a potential security issue, please do not post it in
 ## License
 
 The Amazon ECS Container Agent is licensed under the Apache 2.0 License.
+
+## Go setup
+run all these:
+```
+cd /root
+curl -O https://dl.google.com/go/go1.12.13.linux-amd64.tar.gz
+tar -C /usr/local -xzf go1.12.13.linux-amd64.tar.gz
+export PATH=$PATH:/usr/local/go/bin
+mkdir go
+export GOPATH=/root/go
+mkdir -p /root/go/src/github.com/aws
+cd /root/go/src/github.com/aws
+yum install -y git
+git clone https://github.com/aws/amazon-ecs-agent.git
+cd amazon-ecs-agent
+make get-dep get-deps govet
+make gobuild
+make 
+```
+
+Run the agent:
+```
+service ecs stop
+
+sysctl -w net.ipv4.conf.all.route_localnet=1
+iptables -t nat -A PREROUTING -p tcp -d 169.254.170.2 --dport 80 -j DNAT --to-destination 127.0.0.1:51679
+iptables -t nat -A OUTPUT -d 169.254.170.2 -p tcp -m tcp --dport 80 -j REDIRECT --to-ports 51679
+
+docker run --name ecs-agent \
+    --init \
+    --rm \
+    --volume=/etc/docker/plugins:/etc/docker/plugins:ro \
+    --volume=/etc/ecs:/etc/ecs \
+    --volume=/etc/pki:/etc/pki:ro \
+    --volume=/lib64:/lib64:ro \
+    --volume=/lib:/lib:ro \
+    --volume=/proc:/host/proc:ro \
+    --volume=/run/docker/plugins:/run/docker/plugins:ro \
+    --volume=/sbin:/sbin:ro \
+    --volume=/sys/fs/cgroup:/sys/fs/cgroup \
+    --volume=/usr/lib/docker/plugins:/usr/lib/docker/plugins:ro \
+    --volume=/usr/lib64:/usr/lib64:ro \
+    --volume=/usr/lib:/usr/lib:ro \
+    --volume=/var/cache/ecs:/var/cache/ecs \
+    --volume=/var/lib/ecs/data:/data:Z \
+    --volume=/var/log/ecs/:/log:Z \
+    --volume=/var/lib/ecs:/var/lib/ecs \
+    --volume=/var/run:/var/run \
+    --net=host \
+    --env-file=/etc/ecs/ecs.config \
+    --cap-add=sys_admin \
+    --cap-add=net_admin \
+    --env ECS_AGENT_CONFIG_FILE_PATH=/etc/ecs/ecs.config.json \
+    --env ECS_DATADIR=/data \
+    --env ECS_ENABLE_TASK_ENI=true \
+    --env ECS_ENABLE_TASK_IAM_ROLE=true \
+    --env ECS_ENABLE_TASK_IAM_ROLE_NETWORK_HOST=true \
+    --env ECS_LOGFILE=/log/ecs-agent.log \
+    --env ECS_LOGLEVEL=debug \
+    --env ECS_UPDATES_ENABLED=false \
+    --env PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+    --env SSL_CERT_DIR=/etc/pki/tls/certs \
+    --detach \
+    amazon/amazon-ecs-agent:make
+```

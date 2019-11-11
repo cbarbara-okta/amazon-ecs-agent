@@ -134,6 +134,11 @@ run-sudo-tests:
 run-functional-tests: testnnp test-registry ecr-execution-role-image telemetry-test-image storage-stats-test-image
 	${GOTEST} -tags functional -timeout=100m ./agent/functional_tests/...
 
+test-in-docker:
+	docker build -f scripts/dockerfiles/Dockerfile.test -t "amazon/amazon-ecs-agent-test:make" .
+	# Privileged needed for docker-in-docker so integ tests pass
+	docker run --net=none -v "$(PWD):/go/src/github.com/aws/amazon-ecs-agent" --privileged "amazon/amazon-ecs-agent-test:make"
+
 benchmark-test:
 	go test -run=XX -bench=. ./agent/...
 

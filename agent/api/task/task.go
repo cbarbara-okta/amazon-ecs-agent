@@ -294,12 +294,18 @@ func (task *Task) PostUnmarshalTask(cfg *config.Config,
 	// TODO, add rudimentary plugin support and call any plugins that want to
 	// hook into this
 	task.adjustForPlatform(cfg)
+
+	//CB: we always want this value to be false
 	if task.MemoryCPULimitsEnabled {
+		seelog.Errorf("CB: Task [%s]: task.MemoryCPULimitsEnabled=true", task.Arn)
+
 		err := task.initializeCgroupResourceSpec(cfg.CgroupPath, cfg.CgroupCPUPeriod, resourceFields)
 		if err != nil {
 			seelog.Errorf("Task [%s]: could not intialize resource: %v", task.Arn, err)
 			return apierrors.NewResourceInitError(task.Arn, err)
 		}
+	} else {
+		seelog.Errorf("CB: Task [%s]: task.MemoryCPULimitsEnabled=false", task.Arn)
 	}
 
 	err := task.initializeContainerOrderingForVolumes()
@@ -1383,6 +1389,8 @@ func (task *Task) dockerHostConfig(container *apicontainer.Container, dockerCont
 	}
 
 	resources := task.getDockerResources(container)
+	seelog.Errorf("CB: dockerHostConfig: resources.Memory=%d, resources.MemoryReservation=%d, resources.CPUShares=%d",
+		resources.Memory, resources.MemoryReservation, resources.CPUShares)
 
 	// Populate hostConfig
 	hostConfig := &dockercontainer.HostConfig{
@@ -1406,12 +1414,20 @@ func (task *Task) dockerHostConfig(container *apicontainer.Container, dockerCont
 		if err != nil {
 			return nil, &apierrors.HostConfigError{Msg: "Unable to decode given host config: " + err.Error()}
 		}
+		seelog.Errorf("CB: dockerHostConfig1: hostConfig.Resources.Memory=%d, hostConfig.Resources.MemoryReservation=%d, hostConfig.Resources.CPUShares=%d",
+			hostConfig.Resources.Memory, hostConfig.Resources.MemoryReservation, hostConfig.Resources.CPUShares)
+		if hostConfig.Resources.MemoryReservation > 0 {
+			hostConfig.Resources.MemoryReservation = 0
+			seelog.Errorf("CB: dockerHostConfig1.5: hostConfig.Resources.MemoryReservation reset to 0")
+		}
 	}
 
 	err = task.platformHostConfigOverride(hostConfig)
 	if err != nil {
 		return nil, &apierrors.HostConfigError{Msg: err.Error()}
 	}
+	seelog.Errorf("CB: dockerHostConfig2: hostConfig.Resources.Memory=%d, hostConfig.Resources.MemoryReservation=%d, hostConfig.Resources.CPUShares=%d",
+		hostConfig.Resources.Memory, hostConfig.Resources.MemoryReservation, hostConfig.Resources.CPUShares)
 
 	// Determine if network mode should be overridden and override it if needed
 	ok, networkMode := task.shouldOverrideNetworkMode(container, dockerContainerMap)
@@ -1440,6 +1456,9 @@ func (task *Task) dockerHostConfig(container *apicontainer.Container, dockerCont
 		hostConfig.IpcMode = dockercontainer.IpcMode(ipcMode)
 	}
 
+	seelog.Errorf("CB: dockerHostConfig3: hostConfig.Resources.Memory=%d, hostConfig.Resources.MemoryReservation=%d, hostConfig.Resources.CPUShares=%d",
+		hostConfig.Resources.Memory, hostConfig.Resources.MemoryReservation, hostConfig.Resources.CPUShares)
+
 	return hostConfig, nil
 }
 
@@ -1452,11 +1471,14 @@ func (task *Task) getDockerResources(container *apicontainer.Container) dockerco
 			task.Arn, container.Name, apicontainer.DockerContainerMinimumMemoryInBytes)
 		dockerMem = apicontainer.DockerContainerMinimumMemoryInBytes
 	}
+	seelog.Errorf("CB: getDockerResources: container.Memory=%d, dockerMem=%d", container.Memory, dockerMem)
+
 	// Set CPUShares
 	cpuShare := task.dockerCPUShares(container.CPU)
+	seelog.Errorf("CB: getDockerResources: container.CPU=%d, cpuShare=%d", container.CPU, cpuShare)
 	resources := dockercontainer.Resources{
-		Memory:    dockerMem,
-		CPUShares: cpuShare,
+		// Memory: dockerMem,
+		// CPUShares: cpuShare,
 	}
 	return resources
 }

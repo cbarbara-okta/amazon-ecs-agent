@@ -35,8 +35,10 @@ const (
 	defaultCPUPeriod = 100 * time.Millisecond // 100ms
 	// With a 100ms CPU period, we can express 0.01 vCPU to 10 vCPUs
 	maxTaskVCPULimit = 10
+
+	//CB: allow us to set it to 0
 	// Reference: http://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_ContainerDefinition.html
-	minimumCPUShare = 2
+	minimumCPUShare = 0
 
 	minimumCPUPercent = 0
 	bytesPerMegabyte  = 1024 * 1024
@@ -154,8 +156,11 @@ func (task *Task) buildImplicitLinuxCPUSpec() specs.LinuxCPU {
 	// default task CPU shares
 	if taskCPUShares == 0 {
 		// Set default CPU shares
+		seelog.Errorf("CB: taskCPUShares = 0, minimumCPUShare = %d", minimumCPUShare)
 		taskCPUShares = minimumCPUShare
 	}
+
+	seelog.Errorf("CB: final taskCPUShares = %d", taskCPUShares)
 
 	return specs.LinuxCPU{
 		Shares: &taskCPUShares,

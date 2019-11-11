@@ -913,6 +913,8 @@ func (engine *DockerTaskEngine) createContainer(task *apitask.Task, container *a
 	if hcerr != nil {
 		return dockerapi.DockerContainerMetadata{Error: apierrors.NamedError(hcerr)}
 	}
+	seelog.Errorf("CB: createContainer1: hostConfig.Resources.Memory=%d, hostConfig.Resources.MemoryReservation=%d, hostConfig.Resources.CPUShares=%d",
+		hostConfig.Resources.Memory, hostConfig.Resources.MemoryReservation, hostConfig.Resources.CPUShares)
 
 	if container.AWSLogAuthExecutionRole() {
 		err := task.ApplyExecutionRoleLogsAuth(hostConfig, engine.credentialsManager)
@@ -941,6 +943,9 @@ func (engine *DockerTaskEngine) createContainer(task *apitask.Task, container *a
 			})
 		}
 	}
+
+	seelog.Errorf("CB: createContainer2: hostConfig.Resources.Memory=%d, hostConfig.Resources.MemoryReservation=%d, hostConfig.Resources.CPUShares=%d",
+		hostConfig.Resources.Memory, hostConfig.Resources.MemoryReservation, hostConfig.Resources.CPUShares)
 
 	// If the container is using a special log driver type "awsfirelens", it means the container wants to use
 	// the firelens container to send logs. In this case, override the log driver type to be fluentd
@@ -978,6 +983,9 @@ func (engine *DockerTaskEngine) createContainer(task *apitask.Task, container *a
 			return dockerapi.DockerContainerMetadata{Error: apierrors.NamedError(err)}
 		}
 	}
+
+	seelog.Errorf("CB: createContainer3: hostConfig.Resources.Memory=%d, hostConfig.Resources.MemoryReservation=%d, hostConfig.Resources.CPUShares=%d",
+		hostConfig.Resources.Memory, hostConfig.Resources.MemoryReservation, hostConfig.Resources.CPUShares)
 
 	config, err := task.DockerConfig(container, dockerClientVersion)
 	if err != nil {
@@ -1023,6 +1031,8 @@ func (engine *DockerTaskEngine) createContainer(task *apitask.Task, container *a
 		}
 	}
 
+	seelog.Errorf("CB: createContainer4: hostConfig.Resources.Memory=%d, hostConfig.Resources.MemoryReservation=%d, hostConfig.Resources.CPUShares=%d",
+		hostConfig.Resources.Memory, hostConfig.Resources.MemoryReservation, hostConfig.Resources.CPUShares)
 	createContainerBegin := time.Now()
 	metadata := client.CreateContainer(engine.ctx, config, hostConfig,
 		dockerContainerName, dockerclient.CreateContainerTimeout)
@@ -1037,6 +1047,9 @@ func (engine *DockerTaskEngine) createContainer(task *apitask.Task, container *a
 	seelog.Infof("Task engine [%s]: created docker container for task: %s -> %s, took %s",
 		task.Arn, container.Name, metadata.DockerID, time.Since(createContainerBegin))
 	container.SetRuntimeID(metadata.DockerID)
+
+	seelog.Errorf("CB: createContainer5: hostConfig.Resources.Memory=%d, hostConfig.Resources.MemoryReservation=%d, hostConfig.Resources.CPUShares=%d",
+		hostConfig.Resources.Memory, hostConfig.Resources.MemoryReservation, hostConfig.Resources.CPUShares)
 	return metadata
 }
 
